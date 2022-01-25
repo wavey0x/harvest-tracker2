@@ -5,7 +5,7 @@ warnings.simplefilter('ignore')
 
 def main():
     sql = """
-    CREATE TABLE reports (
+    CREATE TABLE reports2 (
         id                  SERIAL PRIMARY KEY, 
         chain_id            integer, 
         block               integer, 
@@ -13,21 +13,21 @@ def main():
         txn_hash            varchar(100),
         txn_to              varchar(100),
         txn_from            varchar(100),
-        txn_gas_used        varchar(100),
-        txn_gas_price       varchar(100),
+        txn_gas_used        numeric(78,0),
+        txn_gas_price       numeric(78,0),
         txn_fee_usd             decimal,
         txn_fee_eth             decimal,
         
         vault_address       varchar(100),
         strategy_address    varchar(100),
-        gain                varchar(100),
-        loss                varchar(100),
-        debt_paid           varchar(100),
-        total_gain          varchar(100),
-        total_loss          varchar(100),
-        total_debt          varchar(100),
-        debt_added          varchar(100),
-        debt_ratio          varchar(100),
+        gain                numeric(78,0),
+        loss                numeric(78,0),
+        debt_paid           numeric(78,0),
+        total_gain          numeric(78,0),
+        total_loss          numeric(78,0),
+        total_debt          numeric(78,0),
+        debt_added          numeric(78,0),
+        debt_ratio          integer,
 
         want_token          varchar(100),
         vault_api           varchar(100),
@@ -37,6 +37,7 @@ def main():
         strategy_name       varchar(100),
         strategy_api        varchar(100),
         previous_report_id  integer,
+        multi_harvest       boolean,
         
         date                date,
         date_string         varchar(100),
@@ -57,7 +58,7 @@ def main():
         cur = conn.cursor()
         print(sql)
         cur.execute(sql)
-        cur.execute(sql2)
+        # cur.execute(sql2)
         conn.commit()
         cur.close()
 
@@ -67,4 +68,19 @@ def main():
         if conn is not None:
             conn.close()
 
+# Used this query to manually set multi-harvest value
+sql = """
+UPDATE reports
+SET multi_harvest=TRUE
+WHERE txn_hash IN(
+	SELECT txn_hash
+	FROM reports
+	WHERE txn_hash IN (
+	    SELECT txn_hash
+	    FROM reports
+	    GROUP BY txn_hash
+	    HAVING COUNT(id) > 1
+	)
+)
+"""
 main()

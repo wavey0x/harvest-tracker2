@@ -7,7 +7,7 @@ from brownie import chain, interface, web3, Contract
 from web3._utils.events import construct_event_topic_set
 from yearn.utils import closest_block_after_timestamp, contract_creation_block
 from yearn.prices import magic
-from yearn.db.models import Reports, Session, engine, select
+from yearn.db.models import Reports, Event, Session, engine, select
 from sqlalchemy import select as Select, desc, asc
 # from yearn.utils import closest_block_after_timestamp, get_block_timestamp
 from yearn.networks import Network
@@ -67,7 +67,7 @@ topics_v030 = construct_event_topic_set(
 )
 
 def main():
-    log_loop(500)
+    log_loop(25)
 
 def log_loop(interval_seconds):
     last_reported_block, last_reported_block030 = last_harvest_block()
@@ -76,18 +76,43 @@ def log_loop(interval_seconds):
     print("latest_block030",last_reported_block030)
     print("blocks behind (new)", chain.height - last_reported_block)
     print("blocks behind (old)", chain.height - last_reported_block030)
-    event_filter_v030 = web3.eth.filter({'topics': topics_v030, "fromBlock": last_reported_block030})
-    event_filter = web3.eth.filter({'topics': topics, "fromBlock": last_reported_block})
+    event_filter_v030 = web3.eth.filter({'topics': topics_v030, "fromBlock": last_reported_block030 + 1})
+    event_filter = web3.eth.filter({'topics': topics, "fromBlock": last_reported_block + 1})
     
     while True: # Keep this as a long-running script
+        events_to_process = []
+        transaction_hashes = []
+        
         for strategy_report_event in decode_logs(event_filter.get_new_entries()):
-            handle_event(strategy_report_event, False)
+            e = Event(False, strategy_report_event, strategy_report_event.transaction_hash.hex())
+            if e.txn_hash in transaction_hashes:
+                e.multi_harvest = True
+                for i in range(0, len(events_to_process)):
+                        if e.txn_hash == events_to_process[i].txn_hash:
+                            events_to_process[i].multi_harvest = True
+                            print("🥳 found match")
+            else:
+                transaction_hashes.append(strategy_report_event.transaction_hash.hex())
+            events_to_process.append(e)
+            
         if chain.id == 1: # No old vaults deployed anywhere other than mainnet
             for strategy_report_event in decode_logs(event_filter_v030.get_new_entries()):
-                handle_event(strategy_report_event, True)
+                e = Event(True, strategy_report_event, strategy_report_event.transaction_hash.hex())
+                if e.txn_hash in transaction_hashes:
+                    e.multi_harvest = True
+                    for i in range(0, len(events_to_process)):
+                        if e.txn_hash == events_to_process[i].txn_hash:
+                            events_to_process[i].multi_harvest = True
+                            print("🥳 found match")
+                else:
+                    transaction_hashes.append(strategy_report_event.transaction_hash.hex())
+                events_to_process.append(e)
+
+        for e in events_to_process:
+            handle_event(e.event, e.multi_harvest, e.isOldApi)
         time.sleep(interval_seconds)
 
-def handle_event(event, isOldApi):
+def handle_event(event, multi_harvest, isOldApi):
     txn_hash = event.transaction_hash.hex()
     tx = web3.eth.getTransactionReceipt(txn_hash)
     # TODO: Detect if endorsed ✅
@@ -98,6 +123,7 @@ def handle_event(event, isOldApi):
     ts = chain[event.block_number].timestamp
     dt = datetime.utcfromtimestamp(ts).strftime("%m/%d/%Y, %H:%M:%S")
     r = Reports()
+    r.multi_harvest = multi_harvest
     r.chain_id = chain.id
     if isOldApi:
         r.strategy_address, r.gain, r.loss, r.total_gain, r.total_loss, r.total_debt, r.debt_added, r.debt_ratio = event.values()
@@ -164,6 +190,9 @@ def last_harvest_block():
     return result1, result2
 
 def query():
+    txn_hash = "0x8141d310d407e9a3583b91c3d0a003964fc6a7133268c0d58350bbfc3cca6373"
+    tx = web3.eth.getTransactionReceipt(txn_hash)
+    
     with Session(engine) as session:
         strategy_address = "0xB5F6747147990c4ddCeBbd0d4ef25461a967D079"
         query = select(Reports).where(

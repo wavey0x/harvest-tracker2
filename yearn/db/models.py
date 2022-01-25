@@ -16,6 +16,16 @@ from sqlmodel import (
     select,
 )
 
+class Event(object):
+    isOldApi = False
+    event = None
+    txn_hash = ""
+    multi_harvest = False
+    def __init__(self, isOldApi, event, txn_hash):
+        self.isOldApi = isOldApi
+        self.event = event
+        self.txn_hash = txn_hash
+
 class Reports(SQLModel, table=True):
     id: int = Field(primary_key=True)
     chain_id: int
@@ -48,6 +58,7 @@ class Reports(SQLModel, table=True):
     strategy_name: str
     strategy_api: str
     previous_report_id: int
+    multi_harvest: bool
     # Date fields
     date: datetime
     date_string: str
@@ -56,10 +67,11 @@ class Reports(SQLModel, table=True):
     
 
 
-user = os.environ.get('POSTGRES_USER', 'POSTGRES_PASS')
+user = os.environ.get('POSTGRES_USER')
+password = os.environ.get('POSTGRES_PASS')
 host = os.environ.get('POSTGRES_HOST')
 
-dsn = f'postgresql://{user}@{host}:5432/harvests'
+dsn = f'postgresql://{user}:{password}@{host}:5432/harvests'
 engine = create_engine(dsn, echo=False)
 
 # SQLModel.metadata.drop_all(engine)
