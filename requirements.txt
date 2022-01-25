@@ -1,0 +1,5 @@
+eth-brownie>=1.16.4
+psycopg2-binary>=2.9.3
+web3>=5.23.1
+asyncio>=3.4.3
+joblib>=1.0.1
