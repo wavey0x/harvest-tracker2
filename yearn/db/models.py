@@ -26,18 +26,40 @@ class Event(object):
         self.event = event
         self.txn_hash = txn_hash
 
+class Transactions(SQLModel, table=True):
+    txn_hash: str = Field(primary_key=True)
+    chain_id: int
+    # Transaction fields
+    block: int
+    txn_to: str
+    txn_from: str
+
+    txn_gas_used: int
+    txn_gas_price: int
+    eth_price_at_block: float
+    call_cost_usd: float
+    call_cost_eth: float
+    kp3r_price_at_block: float
+    kp3r_paid: int
+    kp3r_paid_usd: float
+    keeper_called: bool
+
+    # Date fields
+    date: datetime
+    date_string: str
+    timestamp: str
+    updated_timestamp: datetime
+
+    reports: List["Reports"] = Relationship(back_populates="txn")
+
 class Reports(SQLModel, table=True):
     id: int = Field(primary_key=True)
     chain_id: int
     # Transaction fields
     block: int
     txn_hash: str
-    txn_to: str
-    txn_from: str
-    txn_gas_used: int
-    txn_gas_price: int
-    txn_fee_eth: float
-    txn_fee_usd: float
+    txn_hash: str = Field(default=None, foreign_key="transactions.txn_hash")
+    txn: Transactions = Relationship(back_populates="reports")
     # Event fields
     vault_address: str
     strategy_address: str
@@ -51,6 +73,11 @@ class Reports(SQLModel, table=True):
     debt_ratio: int
     # Looked-up fields
     want_token: str
+    want_price_at_block: int
+    want_gain_usd: int
+    gov_fee_in_want: int
+    strategist_fee_in_want: int
+    gain_post_fees: int
     vault_api: str
     vault_name: str
     vault_symbol: str
@@ -65,13 +92,11 @@ class Reports(SQLModel, table=True):
     timestamp: str
     updated_timestamp: datetime
     
-
-
 user = os.environ.get('POSTGRES_USER')
 password = os.environ.get('POSTGRES_PASS')
 host = os.environ.get('POSTGRES_HOST')
 
-dsn = f'postgresql://{user}:{password}@{host}:5432/harvests'
+dsn = f'postgresql://{user}:{password}@{host}:5432/reports'
 engine = create_engine(dsn, echo=False)
 
 # SQLModel.metadata.drop_all(engine)
