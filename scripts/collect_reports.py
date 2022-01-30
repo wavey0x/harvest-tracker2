@@ -13,6 +13,7 @@ from yearn.events import decode_logs
 import warnings
 warnings.filterwarnings("ignore", ".*Class SelectOfScalar will not make use of SQL compilation caching.*")
 warnings.filterwarnings("ignore", ".*It has been discarded*")
+warnings.filterwarnings("ignore", ".*Locally compiled and on-chain bytecode*")
 
 
 CHAIN_VALUES = {
