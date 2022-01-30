@@ -285,7 +285,6 @@ def compute_apr(report, previous_report):
 
 def parse_fees(tx, vault_address, strategy_address):
     treasury = CHAIN_VALUES[chain.id]["YEARN_TREASURY"]
-    # token = interface.IVault032(vault_address)
     token = contract(vault_address)
     token = web3.eth.contract(str(vault_address), abi=token.abi)
     decoded_events = token.events.Transfer().processReceipt(tx)
