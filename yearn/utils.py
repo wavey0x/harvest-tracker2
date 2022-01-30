@@ -74,8 +74,6 @@ def contract_creation_block(address) -> int:
     Find contract creation block using binary search.
     NOTE Requires access to historical state. Doesn't account for CREATE2 or SELFDESTRUCT.
     """
-    logger.info("contract creation block %s", address)
-
     barrier = BINARY_SEARCH_BARRIER[chain.id]
     lo = barrier
     hi = end = chain.height
