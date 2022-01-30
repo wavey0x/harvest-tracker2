@@ -78,6 +78,8 @@ class Reports(SQLModel, table=True):
     gov_fee_in_want: int
     strategist_fee_in_want: int
     gain_post_fees: int
+    rough_apr_pre_fee: float
+    rough_apr_post_fee: float
     vault_api: str
     vault_name: str
     vault_symbol: str

@@ -29,6 +29,8 @@ def main():
         gov_fee_in_want         numeric(78,0),
         strategist_fee_in_want  numeric(78,0),
         gain_post_fees      numeric(78,0),
+        rough_apr_pre_fee   decimal,
+        rough_apr_post_fee  decimal,
         vault_api           varchar(100),
         vault_symbol        varchar(100),
         vault_name          varchar(100),
